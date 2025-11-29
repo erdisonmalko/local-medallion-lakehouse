@@ -1,0 +1,89 @@
+services:
+  spark:
+    image: apache/spark:3.5.1
+    container_name: spark
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_EXTRA_CLASSPATH=/opt/spark/external_jars/*
+    command: >
+      bash -c "
+      mkdir -p /opt/spark/external_jars &&
+      /opt/spark/sbin/start-master.sh &&
+      tail -f /opt/spark/logs/spark--org.apache.spark.deploy.master.Master-*.out
+      "
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./external_jars:/opt/spark/external_jars
+
+  spark-worker:
+    image: apache/spark:3.5.1
+    container_name: spark-worker
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_EXTRA_CLASSPATH=/opt/spark/external_jars/*
+    command: >
+      bash -c "
+      mkdir -p /opt/spark/external_jars &&
+      /opt/spark/sbin/start-worker.sh spark://spark:7077 &&
+      tail -f /opt/spark/logs/spark--org.apache.spark.deploy.worker.Worker-*.out
+      "
+    depends_on:
+      - spark
+    volumes:
+      - ./external_jars:/opt/spark/external_jars
+
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: sourcedb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql
+
+  jupyter:
+    image: jupyter/pyspark-notebook
+    container_name: jupyter
+    environment:
+      - JUPYTER_TOKEN=local
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./jars:/usr/local/spark/jars
+
+  airflow:
+    image: apache/airflow:2.9.1
+    container_name: airflow
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow-data:/opt/airflow
+    command: bash -c "airflow db init && airflow users create --username admin --password admin --firstname a --lastname b --role Admin --email admin@example.com && airflow webserver & airflow scheduler"
+
+volumes:
+  minio-data:
+  pgdata:
+  airflow-data:
