@@ -1,52 +1,56 @@
 services:
+
+  ###########################################################################
+  # SPARK MASTER
+  ###########################################################################
   spark:
     image: apache/spark:3.5.1
     container_name: spark
+    hostname: spark
     environment:
-      - SPARK_NO_DAEMONIZE=true
-      - SPARK_EXTRA_CLASSPATH=/opt/spark/external_jars/*
+      - SPARK_MASTER_HOST=spark
+    ports:
+      - "8080:8080"   # Spark Web UI
+      - "7077:7077"   # Spark master RPC
+      - "6066:6066"   # Spark REST API
+    volumes:
+      - ./spark-app:/opt/spark-app
+      # - ./external_jars:/opt/spark/jars
     command: >
       bash -c "
-      mkdir -p /opt/spark/external_jars &&
-      /opt/spark/sbin/start-master.sh &&
-      tail -f /opt/spark/logs/spark--org.apache.spark.deploy.master.Master-*.out
+        mkdir -p /opt/spark/conf &&
+        touch /opt/spark/conf/spark-defaults.conf &&
+        echo 'spark.master spark://spark:7077' >> /opt/spark/conf/spark-defaults.conf &&
+        echo 'spark.deploy.rest.enabled true' >> /opt/spark/conf/spark-defaults.conf &&
+        /opt/spark/sbin/start-master.sh &&
+        tail -f /opt/spark/logs/spark--org.apache.spark.deploy.master.Master-*.out
       "
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./external_jars:/opt/spark/external_jars
 
+  ###########################################################################
+  # SPARK WORKER
+  ###########################################################################
   spark-worker:
     image: apache/spark:3.5.1
     container_name: spark-worker
-    environment:
-      - SPARK_NO_DAEMONIZE=true
-      - SPARK_EXTRA_CLASSPATH=/opt/spark/external_jars/*
-    command: >
-      bash -c "
-      mkdir -p /opt/spark/external_jars &&
-      /opt/spark/sbin/start-worker.sh spark://spark:7077 &&
-      tail -f /opt/spark/logs/spark--org.apache.spark.deploy.worker.Worker-*.out
-      "
     depends_on:
       - spark
-    volumes:
-      - ./external_jars:/opt/spark/external_jars
-
-
-  minio:
-    image: minio/minio:latest
-    container_name: minio
-    command: server /data --console-address :9001
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2G
     volumes:
-      - minio-data:/data
+      - ./spark-app:/opt/spark-app
+      # - ./external_jars:/opt/spark/jars
+    command: >
+      bash -c "
+        mkdir -p /opt/spark/conf &&
+        touch /opt/spark/conf/spark-defaults.conf &&
+        /opt/spark/sbin/start-worker.sh spark://spark:7077 &&
+        tail -f /opt/spark/logs/spark--org.apache.spark.deploy.worker.Worker-*.out
+      "
 
+  ###########################################################################
+  # POSTGRES (source DB)
+  ###########################################################################
   postgres:
     image: postgres:15
     container_name: postgres
@@ -60,6 +64,25 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./init/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql
 
+  ###########################################################################
+  # MINIO (S3-compatible storage)
+  ###########################################################################
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  ###########################################################################
+  # JUPYTER NOTEBOOK (with PySpark)
+  ###########################################################################
   jupyter:
     image: jupyter/pyspark-notebook
     container_name: jupyter
@@ -69,8 +92,11 @@ services:
       - "8888:8888"
     volumes:
       - ./notebooks:/home/jovyan/work
-      - ./jars:/usr/local/spark/jars
+      - ./external_jars:/usr/local/spark/jars
 
+  ###########################################################################
+  # APACHE AIRFLOW
+  ###########################################################################
   airflow:
     image: apache/airflow:2.9.1
     container_name: airflow
@@ -81,9 +107,18 @@ services:
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - airflow-data:/opt/airflow
-    command: bash -c "airflow db init && airflow users create --username admin --password admin --firstname a --lastname b --role Admin --email admin@example.com && airflow webserver & airflow scheduler"
+    command: >
+      bash -c "
+        rm -f /opt/airflow/airflow-webserver.pid &&
+        airflow db init &&
+        airflow users create --username admin --password admin --firstname a --lastname b --role Admin --email admin@example.com &&
+        airflow webserver & airflow scheduler
+      "
 
+###########################################################################
+# VOLUMES
+###########################################################################
 volumes:
-  minio-data:
   pgdata:
+  minio-data:
   airflow-data:

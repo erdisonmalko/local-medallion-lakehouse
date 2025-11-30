@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.operators.bash import BashOperator
+from airflow.operators.bash import BashOperator # type: ignore
 
 default_args = {
     'owner': 'erdison',
@@ -18,19 +18,19 @@ with DAG(
     catchup=False
 ) as dag:
 
-    t1 = BashOperator(
-        task_id='bronze_ingest',
-        bash_command='spark-submit /opt/spark-app/notebooks/00_bronze_ingest.py || exit 1'
+    ingest = BashOperator(
+        task_id="bronze_ingest",
+        bash_command="docker exec spark-master spark-submit /opt/spark-app/notebooks/00_bronze_ingest.py",
     )
-
-    t2 = BashOperator(
+    
+    silver_transform = BashOperator(
         task_id='silver_transform',
-        bash_command='spark-submit /opt/spark-app/notebooks/10_silver_transform.py || exit 1'
+        bash_command='docker exec spark-master spark-submit /opt/spark-app/notebooks/10_silver_transform.py',
     )
 
-    t3 = BashOperator(
+    gold_aggregate = BashOperator(
         task_id='gold_aggregate',
-        bash_command='spark-submit /opt/spark-app/notebooks/20_gold_aggregate.py || exit 1'
+        bash_command='docker exec spark-master spark-submit /opt/spark-app/notebooks/20_gold_aggregate.py',
     )
 
-    t1 >> t2 >> t3
+    ingest >> silver_transform >> gold_aggregate

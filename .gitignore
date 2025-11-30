@@ -1,6 +1,6 @@
 # local
 external_jars/
-
+*.pyc
 
 
 # Byte-compiled / optimized / DLL files
