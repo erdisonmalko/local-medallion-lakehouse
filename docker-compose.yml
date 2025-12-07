@@ -55,7 +55,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./init/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql
+      - ./init-services/postgres/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql
 
   ###########################################################################
   # MINIO (S3-compatible storage)

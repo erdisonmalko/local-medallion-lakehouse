@@ -56,11 +56,11 @@ case "${1:-}" in
     wait_for_service "MinIO" "localhost" "9000"
 
     log "Initializing MinIO buckets..."
-    ./init/init_minio.sh
+    ./init-services/minio/init_minio.sh
 
-    if [[ -f "init/init_postgres.sql" ]]; then
+    if [[ -f "init-services/postgres/init_postgres.sql" ]]; then
       log "Running Postgres seed file..."
-      docker exec -i postgres psql -U admin -d sourcedb < init/init_postgres.sql
+      docker exec -i postgres psql -U admin -d sourcedb < init-services/postgres/init_postgres.sql
       success "Postgres seeded."
     else
       error "init_postgres.sql NOT found — skipping"
@@ -70,7 +70,7 @@ case "${1:-}" in
     ;;
 
   *)
-    echo "Usage: ./scripts/run_local.sh [init|up|down]"
+    echo "Usage: ./scripts/local/run_local.sh [init|up|down]"
     exit 1
     ;;
 esac

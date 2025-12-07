@@ -1,6 +1,7 @@
 # sample_data.py - insert more sample rows into Postgres to simulate incoming data
 import psycopg2
 from faker import Faker
+
 fake = Faker()
 
 conn = psycopg2.connect(host='127.0.0.1', dbname='sourcedb', user='admin', password='admin')
