@@ -1,7 +1,12 @@
 # Silver transform: read bronze, run DQ checks, dedupe, merge into silver table
+
+# spark SQL functions
+from pyspark.sql.functions import col, row_number # type: ignore
+from pyspark.sql.window import Window # type: ignore
+
+# local imports
 from helpers.spark_session import build_spark
-from pyspark.sql.functions import col, row_number
-from pyspark.sql.window import Window
+
 
 spark = build_spark('silver-transform')
 

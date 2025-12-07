@@ -1,6 +1,10 @@
 # Gold aggregation: read silver and produce aggregates
+# spark SQL functions
+from pyspark.sql.functions import col, count # type: ignore
+
+# local imports
 from helpers.spark_session import build_spark
-from pyspark.sql.functions import col, count
+
 spark = build_spark('gold-aggregate')
 
 silver_path = "s3a://silver/customers"
