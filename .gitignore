@@ -2,6 +2,7 @@
 external_jars/
 *.pyc
 .vscode/
+spark-app/jars/*.jar
 
 .ipynb_checkpoints/
 

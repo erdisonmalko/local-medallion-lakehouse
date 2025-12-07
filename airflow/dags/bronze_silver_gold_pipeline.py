@@ -18,24 +18,35 @@ STEPS = [
 
 def submit_job(job_file, **context):
     payload = { 
-        "action": "CreateSubmissionRequest", 
-        "appResource": f"{ROOT}{job_file}", 
-        "clientSparkVersion": "3.5.1", 
-        "mainClass": "org.apache.spark.deploy.PythonRunner", 
-        "environmentVariables": { "PYSPARK_DRIVER_PYTHON": "python3", "PYSPARK_PYTHON": "python3" },
+        "action": "CreateSubmissionRequest",
+        # Use pyspark.zip as runtime
+        "appResource": "file:///opt/spark/python/lib/pyspark.zip",
+        "clientSparkVersion": "3.5.1",
+        "mainClass": "org.apache.spark.deploy.PythonRunner",
+        "environmentVariables": {
+            "PYSPARK_DRIVER_PYTHON": "python3",
+            "PYSPARK_PYTHON": "python3",
+            # Ensure helpers folder is discoverable
+            "PYTHONPATH": "/opt/spark-app"
+        },
         "sparkProperties": { 
-            "spark.app.name": "bronze_ingest", 
-            "spark.master": "spark://spark:7077", 
-            "spark.submit.deployMode": "cluster", 
-            "spark.driver.supervise": "false", 
-            "spark.jars": "", 
-            "spark.executor.memory": "1g", 
-            "spark.driver.memory": "1g"
-            },
-
-        "appArgs":
-            [f"{ROOT}{job_file}"] 
-        }
+            "spark.app.name": job_file.split('.py')[0],
+            "spark.master": "spark://spark:7077",
+            "spark.submit.deployMode": "cluster",
+            "spark.driver.supervise": "false",
+            "spark.jars": (
+                "/opt/spark-app/jars/postgresql-42.6.0.jar,"  # JDBC driver
+                "/opt/spark-app/jars/delta-core_2.12-2.4.0.jar"  # Delta Lake
+            ),
+            "spark.executor.memory": "1g",
+            "spark.driver.memory": "1g",
+            # Delta extensions
+            "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension",
+            "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        },
+        # Pass your actual Python job file here
+        "appArgs": [f"/opt/spark-app/notebooks/{job_file}"]
+    }
 
     response = requests.post(
         SPARK_REST_CREATE,
@@ -52,6 +63,7 @@ def submit_job(job_file, **context):
 
     context['ti'].xcom_push(key=f"{job_file}_submission", value=submission_id)
     return submission_id
+
 
 
 
