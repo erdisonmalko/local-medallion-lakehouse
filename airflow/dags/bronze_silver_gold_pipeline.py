@@ -8,7 +8,7 @@ from airflow.operators.python import PythonOperator # type: ignore
 SPARK_REST_CREATE = "http://spark:6066/v1/submissions/create"
 SPARK_REST_STATUS = "http://spark:6066/v1/submissions/status"
 ROOT = "/opt/spark-app/notebooks/"
-
+# steps or files
 STEPS = [
     "00_bronze_ingest.py",
     "01_silver_transform.py",
