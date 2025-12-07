@@ -6,22 +6,18 @@ services:
   spark:
     image: apache/spark:3.5.1
     container_name: spark
-    hostname: spark
-    environment:
-      - SPARK_MASTER_HOST=spark
     ports:
-      - "8080:8080"   # Spark Web UI
-      - "7077:7077"   # Spark master RPC
-      - "6066:6066"   # Spark REST API
+      - "8080:8080"
+      - "7077:7077"
+      - "6066:6066"
     volumes:
       - ./spark-app:/opt/spark-app
-      # - ./external_jars:/opt/spark/jars
     command: >
       bash -c "
         mkdir -p /opt/spark/conf &&
-        touch /opt/spark/conf/spark-defaults.conf &&
         echo 'spark.master spark://spark:7077' >> /opt/spark/conf/spark-defaults.conf &&
         echo 'spark.deploy.rest.enabled true' >> /opt/spark/conf/spark-defaults.conf &&
+        echo 'spark.master.rest.enabled true' >> /opt/spark/conf/spark-defaults.conf &&
         /opt/spark/sbin/start-master.sh &&
         tail -f /opt/spark/logs/spark--org.apache.spark.deploy.master.Master-*.out
       "
@@ -39,11 +35,8 @@ services:
       - SPARK_WORKER_MEMORY=2G
     volumes:
       - ./spark-app:/opt/spark-app
-      # - ./external_jars:/opt/spark/jars
     command: >
       bash -c "
-        mkdir -p /opt/spark/conf &&
-        touch /opt/spark/conf/spark-defaults.conf &&
         /opt/spark/sbin/start-worker.sh spark://spark:7077 &&
         tail -f /opt/spark/logs/spark--org.apache.spark.deploy.worker.Worker-*.out
       "
@@ -70,7 +63,7 @@ services:
   minio:
     image: minio/minio:latest
     container_name: minio
-    command: server /data --console-address :9001
+    command: server /data --console-address :9001 --compat
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio123
@@ -91,8 +84,7 @@ services:
     ports:
       - "8888:8888"
     volumes:
-      - ./notebooks:/home/jovyan/work
-      - ./external_jars:/usr/local/spark/jars
+      - ./spark-app/notebooks:/home/jovyan/work
 
   ###########################################################################
   # APACHE AIRFLOW
