@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# Create buckets in MinIO using mc (MinIO client). This script runs mc inside a temporary container.
+set -euo pipefail
 
-MC_ALIAS=minio_local
-MC=minio/mc
+MC_IMAGE=minio/mc
+NETWORK=end-to-end-data-pipeline_default
+ALIAS=minio_local
+ENDPOINT=http://minio:9000
 
-# Use host.docker.internal on Mac/Windows, 127.0.0.1 on Linux may require tweaks.
-docker run --rm --network host ${MC} alias set ${MC_ALIAS} http://127.0.0.1:9000 minio minio123 || true
-docker run --rm --network host ${MC} mb ${MC_ALIAS}/bronze || true
-docker run --rm --network host ${MC} mb ${MC_ALIAS}/silver || true
-docker run --rm --network host ${MC} mb ${MC_ALIAS}/gold || true
-docker run --rm --network host ${MC} mb ${MC_ALIAS}/logs || true
-docker run --rm --network host ${MC} ls ${MC_ALIAS} || true
-echo "MinIO buckets created: bronze, silver, gold, logs"
+echo "Setting alias..."
+docker run --rm --network $NETWORK $MC_IMAGE alias set $ALIAS $ENDPOINT minio minio123
+
+echo "Creating buckets..."
+for bucket in bronze silver gold logs; do
+  docker run --rm --network $NETWORK $MC_IMAGE mb $ALIAS/$bucket || true
+done
+
+echo "Listing buckets..."
+docker run --rm --network $NETWORK $MC_IMAGE ls $ALIAS

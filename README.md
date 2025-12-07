@@ -21,3 +21,44 @@ Spark (standalone) + Delta Lake OSS + MinIO (S3) + Postgres (source) + Airflow +
    - Postgres: localhost:5432 (admin/admin)
 
 See `notebooks/` for the PySpark scripts (can be run via `spark-submit` or inside Jupyter).
+
+# Local Development Environment
+
+This project uses Docker Compose to run:
+
+- Apache Spark (Master + Worker)
+- MinIO (S3-compatible storage)
+- Postgres
+- Jupyter/PySpark Notebook
+- Airflow
+
+---
+
+## 🛠 Prerequisites
+
+- WSL 2 (Ubuntu 22.04)
+- Docker Desktop / Docker Engine
+- Python 3.10+
+- `bash`, `curl`, `jq` (optional for debugging)
+
+---
+
+## 🚀 Startup Workflow
+
+### 1️⃣ Start all services
+```bash
+./scripts/run_local.sh up
+```
+
+### Initialize environment (once)
+```bash
+./scripts/run_local.sh init
+```
+
+- Creates MinIO buckets: bronze, silver, gold, logs
+- Seeds Postgres database
+
+### Stop all services
+```bash
+./scripts/run_local.sh down
+```
