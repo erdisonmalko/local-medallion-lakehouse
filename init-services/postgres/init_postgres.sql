@@ -9,6 +9,6 @@ CREATE TABLE IF NOT EXISTS customers (
 
 INSERT INTO customers (name, email, country)
 VALUES
-('Alice','alice@example.com','US'),
+('Alice','alice1@example.com','US'),
 ('Bob','bob@example.com','UK'),
 ('Carla','carla@example.com','DE');
