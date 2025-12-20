@@ -4,7 +4,8 @@ services:
   # SPARK MASTER
   ###########################################################################
   spark:
-    image: apache/spark:3.5.1
+    image: spark:3.5.1-py39
+    build: ./docker/spark
     container_name: spark
     ports:
       - "8080:8080"
@@ -26,7 +27,8 @@ services:
   # SPARK WORKER
   ###########################################################################
   spark-worker:
-    image: apache/spark:3.5.1
+    image: spark:3.5.1-py39
+    build: ./docker/spark
     container_name: spark-worker
     depends_on:
       - spark
@@ -90,15 +92,19 @@ services:
   # APACHE AIRFLOW
   ###########################################################################
   airflow:
-    image: apache/airflow:2.9.1
+    build:
+      context: ./docker/airflow
+      dockerfile: Dockerfile
     container_name: airflow
     environment:
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - PYTHONPATH=/opt/spark-app
     ports:
       - "8085:8080"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - airflow-data:/opt/airflow
+      - ./spark-app:/opt/spark-app
     command: >
       bash -c "
         rm -f /opt/airflow/airflow-webserver.pid &&
@@ -106,6 +112,9 @@ services:
         airflow users create --username admin --password admin --firstname a --lastname b --role Admin --email admin@example.com &&
         airflow webserver & airflow scheduler
       "
+
+
+
 
 ###########################################################################
 # VOLUMES

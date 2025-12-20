@@ -8,7 +8,7 @@ from helpers.spark_session import build_spark
 
 spark = build_spark('bronze-ingest')
 
-jdbc_url = "jdbc:postgresql://localhost:5432/sourcedb"
+jdbc_url = "jdbc:postgresql://postgres:5432/sourcedb"
 jdbc_props = {"user":"admin","password":"admin","driver":"org.postgresql.Driver"}
 
 bronze_path = "s3a://bronze/customers"
