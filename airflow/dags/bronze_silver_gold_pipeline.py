@@ -9,7 +9,6 @@ SPARK_PACKAGES = (
     "org.postgresql:postgresql:42.7.3,"
     "org.apache.hadoop:hadoop-aws:3.3.4"
 )
-
 ROOT = "/opt/spark-app/notebooks/"
 
 
@@ -45,7 +44,6 @@ with DAG(
         f"{ROOT}{job}"
     ),
 )
-
 
         if previous_task:
             previous_task >> task
