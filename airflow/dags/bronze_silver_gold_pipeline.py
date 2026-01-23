@@ -36,13 +36,15 @@ with DAG(
 
     for job in STEPS:
         task = BashOperator(
-    task_id=f"run_{job.split('.')[0]}",
-    bash_command=(
-        f"{SPARK_SUBMIT} "
-        f"--master {SPARK_MASTER} "
-        f"--packages {SPARK_PACKAGES} "
-        f"{ROOT}{job}"
-    ),
+        task_id=f"run_{job.split('.')[0]}",
+        bash_command=(
+            f"{SPARK_SUBMIT} "
+            f"--master {SPARK_MASTER} "
+            f"--conf spark.pyspark.python=python3 "
+            f"--conf spark.pyspark.driver.python=python3 "
+            f"--packages {SPARK_PACKAGES} "
+            f"{ROOT}{job}"
+        ),
 )
 
         if previous_task:
