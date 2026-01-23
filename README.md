@@ -101,20 +101,42 @@ Each layer is implemented as a separate Spark job and can be executed independen
 
 ---
 
-## Execution model (important to understand)
 
-* Spark runs as a **standalone cluster** (master + workers)
-* Spark jobs are submitted using **spark-submit in cluster mode**
-* The **Spark driver runs inside the Spark cluster**, not in Airflow
-* Airflow only:
+## Execution Model: The "Remote Submitter" Pattern
 
-  * Triggers jobs
-  * Tracks state
-  * Manages dependencies and retries
+This platform uses **Apache Airflow** as the "Brain" and **Spark Standalone** as the "Muscle."
 
-This mirrors how Spark is used in production environments.
+* **The Submitter (Airflow):** When a DAG task runs, Airflow executes a `spark-submit` command via the `BashOperator`.
+* **The Driver (Inside Airflow):** The Spark Driver starts **inside the Airflow worker container**. It parses your Python script, builds the DAG of Spark stages, and communicates with the Spark Master.
+* **The Executors (Spark Workers):** The Spark Master allocates resources on the `spark-worker` containers. These workers execute the actual data processing tasks and write directly to **MinIO (S3)**.
+
+> **Note on Versioning:** To avoid `PYTHON_VERSION_MISMATCH` errors, the Python version in the Airflow container and the Spark Worker containers are strictly pinned to **Python 3.9**.
 
 ---
+
+## Medallion Pipeline Section
+
+### 🥉 Bronze: Raw Ingestion
+
+* **Source:** PostgreSQL (`customers` table)
+* **Action:** JDBC Read via Spark
+* **Format:** Delta Lake (Append-only)
+* **Path:** `s3a://bronze/customers/`
+
+### 🥈 Silver: Cleanse & Conform
+
+* **Action:** Schema enforcement, deduplication, and null handling.
+* **Format:** Delta Lake (Overwrite/Upsert)
+* **Path:** `s3a://silver/customers_cleansed/`
+
+### 🥇 Gold: Business Aggregates
+
+* **Action:** Window functions, joins, and aggregations (e.g., `customers_by_country`).
+* **Format:** Delta Lake
+* **Path:** `s3a://gold/total_usage_stats/`
+
+---
+
 
 ## Development workflow
 
