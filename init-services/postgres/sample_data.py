@@ -1,23 +1,28 @@
 import sys
-
+import time
 import psycopg2
 from faker import Faker
 
 fake = Faker()
 
+
 def connect_db():
-    try:
-        # use .env file for production code
-        conn = psycopg2.connect(
-            host='127.0.0.1',
-            dbname='sourcedb',
-            user='admin',
-            password='admin'
-        )
-        return conn
-    except Exception as e:
-        print(f"Error connecting to database: {e}")
-        sys.exit(1)
+    attempts = 0
+    while attempts < 10:
+        try:
+            conn = psycopg2.connect(
+                host='postgres',
+                dbname='sourcedb',
+                user='admin',
+                password='admin'
+            )
+            return conn
+        except Exception as e:
+            attempts += 1
+            print(f"Postgres not ready yet (attempt {attempts}/10)...")
+            time.sleep(5)
+    print("Could not connect to Postgres after 10 attempts.")
+    sys.exit(1)
 
 def ensure_table(cur):
     try:

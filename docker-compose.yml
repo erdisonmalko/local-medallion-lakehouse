@@ -83,7 +83,22 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init-services/postgres/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql
-
+    #########################################################################
+    # POSTGRES SEEDER (to populate sample data)
+    #########################################################################
+    
+  postgres-seeder:
+      image: python:3.9-slim
+      container_name: postgres-seeder
+      depends_on:
+        - postgres
+      volumes:
+        - ./init-services/postgres:/app
+      command: >
+        bash -c "
+          pip install psycopg2-binary faker &&
+          python /app/sample_data.py
+        "
   ###########################################################################
   # MINIO (S3-compatible storage)
   ###########################################################################
