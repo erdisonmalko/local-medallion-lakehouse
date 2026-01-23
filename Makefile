@@ -4,12 +4,12 @@
 
 up:
 	@echo "Starting all containers..."
-	./scripts/local/run_local.sh up
+	./_scripts/local/run_local.sh up
 
 init:
 	@echo "Initializing environment (MinIO + Postgres)..."
-	./scripts/local/run_local.sh init
+	./_scripts/local/run_local.sh init
 
 down:
 	@echo "Stopping all containers..."
-	./scripts/local/run_local.sh down
+	./_scripts/local/run_local.sh down
