@@ -5,7 +5,6 @@ from faker import Faker
 
 fake = Faker()
 
-
 def connect_db():
     attempts = 0
     while attempts < 10:
