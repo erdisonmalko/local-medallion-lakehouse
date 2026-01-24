@@ -1,52 +1,76 @@
 services:
+
+  ###########################################################################
+  # SPARK MASTER
+  ###########################################################################
   spark:
-    image: apache/spark:3.5.1
+    build: ./docker/spark
+    image: spark:3.5.1-py312
     container_name: spark
-    environment:
-      - SPARK_NO_DAEMONIZE=true
-      - SPARK_EXTRA_CLASSPATH=/opt/spark/external_jars/*
-    command: >
-      bash -c "
-      mkdir -p /opt/spark/external_jars &&
-      /opt/spark/sbin/start-master.sh &&
-      tail -f /opt/spark/logs/spark--org.apache.spark.deploy.master.Master-*.out
-      "
     ports:
       - "8080:8080"
+      - "7077:7077"
     volumes:
-      - ./external_jars:/opt/spark/external_jars
-
-  spark-worker:
-    image: apache/spark:3.5.1
-    container_name: spark-worker
-    environment:
-      - SPARK_NO_DAEMONIZE=true
-      - SPARK_EXTRA_CLASSPATH=/opt/spark/external_jars/*
+      - ./spark-app:/opt/spark-app
     command: >
       bash -c "
-      mkdir -p /opt/spark/external_jars &&
-      /opt/spark/sbin/start-worker.sh spark://spark:7077 &&
-      tail -f /opt/spark/logs/spark--org.apache.spark.deploy.worker.Worker-*.out
+        mkdir -p /opt/spark/conf &&
+        echo 'spark.master spark://spark:7077' >> /opt/spark/conf/spark-defaults.conf &&
+        echo 'spark.deploy.rest.enabled true' >> /opt/spark/conf/spark-defaults.conf &&
+        echo 'spark.master.rest.enabled true' >> /opt/spark/conf/spark-defaults.conf &&
+        /opt/spark/sbin/start-master.sh &&
+        tail -f /opt/spark/logs/spark--org.apache.spark.deploy.master.Master-*.out
       "
+
+
+  ###########################################################################
+  # SPARK WORKER
+  ###########################################################################
+  spark-worker:
+    image: spark:3.5.1-py312
+    build: ./docker/spark
+    container_name: spark-worker
     depends_on:
       - spark
-    volumes:
-      - ./external_jars:/opt/spark/external_jars
-
-
-  minio:
-    image: minio/minio:latest
-    container_name: minio
-    command: server /data --console-address :9001
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2G
     volumes:
-      - minio-data:/data
+      - ./spark-app:/opt/spark-app
+    command: >
+      bash -c "
+        /opt/spark/sbin/start-worker.sh spark://spark:7077 &&
+        tail -f /opt/spark/logs/spark--org.apache.spark.deploy.worker.Worker-*.out
+      "
 
+  ###########################################################################
+  # APACHE AIRFLOW
+  ###########################################################################
+  airflow:
+    build:
+      context: ./docker/airflow
+      dockerfile: Dockerfile
+    container_name: airflow
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - PYTHONPATH=/opt/spark-app
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow-data:/opt/airflow
+      - ./spark-app:/opt/spark-app
+    command: >
+      bash -c "
+        rm -f /opt/airflow/airflow-webserver.pid &&
+        airflow db init &&
+        airflow users create --username admin --password admin --firstname a --lastname b --role Admin --email admin@example.com &&
+        airflow webserver & airflow scheduler
+      "
+
+  ###########################################################################
+  # POSTGRES (source DB)
+  ###########################################################################
   postgres:
     image: postgres:15
     container_name: postgres
@@ -58,8 +82,42 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./init/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql
+      - ./init-services/postgres/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql
+  
+  #########################################################################
+  # POSTGRES SEEDER (to populate sample data)
+  #########################################################################
+  postgres-seeder:
+      image: python:3.9-slim
+      container_name: postgres-seeder
+      depends_on:
+        - postgres
+      volumes:
+        - ./init-services/postgres:/app
+      command: >
+        bash -c "
+          pip install psycopg2-binary faker &&
+          python /app/sample_data.py
+        "
+  ###########################################################################
+  # MINIO (S3-compatible storage)
+  ###########################################################################
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address :9001 --compat
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
 
+  ###########################################################################
+  # JUPYTER NOTEBOOK (with PySpark)
+  ###########################################################################
   jupyter:
     image: jupyter/pyspark-notebook
     container_name: jupyter
@@ -68,22 +126,12 @@ services:
     ports:
       - "8888:8888"
     volumes:
-      - ./notebooks:/home/jovyan/work
-      - ./jars:/usr/local/spark/jars
+      - ./spark-app/notebooks:/home/jovyan/work
 
-  airflow:
-    image: apache/airflow:2.9.1
-    container_name: airflow
-    environment:
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-    ports:
-      - "8085:8080"
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - airflow-data:/opt/airflow
-    command: bash -c "airflow db init && airflow users create --username admin --password admin --firstname a --lastname b --role Admin --email admin@example.com && airflow webserver & airflow scheduler"
-
+###########################################################################
+# VOLUMES
+###########################################################################
 volumes:
-  minio-data:
   pgdata:
+  minio-data:
   airflow-data:
