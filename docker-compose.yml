@@ -83,10 +83,10 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init-services/postgres/init_postgres.sql:/docker-entrypoint-initdb.d/init_postgres.sql
-    #########################################################################
-    # POSTGRES SEEDER (to populate sample data)
-    #########################################################################
-    
+  
+  #########################################################################
+  # POSTGRES SEEDER (to populate sample data)
+  #########################################################################
   postgres-seeder:
       image: python:3.9-slim
       container_name: postgres-seeder
