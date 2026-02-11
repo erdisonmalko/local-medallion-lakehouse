@@ -177,12 +177,12 @@ PySparkRuntimeError: [PYTHON_VERSION_MISMATCH]
 **Cause:** Airflow Python ≠ Spark Python
 
 **Fix:**
-- Use the same Python version everywhere (3.12)
+- Use the same Python version everywhere (3.9)
 - Set explicitly:
 
 ```bash
-PYSPARK_PYTHON=/usr/bin/python3.12
-PYSPARK_DRIVER_PYTHON=/usr/bin/python3.12
+PYSPARK_PYTHON=/usr/bin/python3.9
+PYSPARK_DRIVER_PYTHON=/usr/bin/python3.9
 ```
 
 Verify:
@@ -206,13 +206,7 @@ Common causes:
 
 ---
 
-### Volume Shadowing (Critical)
-
-❌ **Never do this**:
-```yaml
-- ./spark:/opt/spark
-```
-
+### Volume Shadowing
 This overwrites Spark binaries.
 
 ✅ Safe mounts:
@@ -245,7 +239,7 @@ docker compose up -d
 
 ---
 
-## 8. Known Issues (Stand-by)
+## 8. Known Issues
 
 These are known pain points to be improved:
 - Simplifying Spark + Airflow image coupling
