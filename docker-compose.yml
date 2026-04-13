@@ -5,7 +5,6 @@ services:
   ###########################################################################
   spark:
     build: ./docker/spark
-    image: spark:3.5.1-py312
     container_name: spark
     ports:
       - "8080:8080"
@@ -27,7 +26,6 @@ services:
   # SPARK WORKER
   ###########################################################################
   spark-worker:
-    image: spark:3.5.1-py312
     build: ./docker/spark
     container_name: spark-worker
     depends_on:

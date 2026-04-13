@@ -30,23 +30,6 @@ The platform is composed of the following services:
 * **Jupyter Notebook**
   Interactive environment for exploration, debugging, and development.
 
-Spark jobs are executed in **cluster mode**, with Airflow acting strictly as an orchestrator — not as a Spark driver.
-
----
-
-## Medallion pipeline concept
-
-This repository follows the **Databricks medallion pattern**:
-
-* **Bronze**
-  Raw ingestion from Postgres into Delta tables (append-only, minimal transformation).
-* **Silver**
-  Cleaned, validated, and standardized datasets.
-* **Gold**
-  Aggregated, analytics-ready tables for downstream consumers.
-
-Each layer is implemented as a separate Spark job and can be executed independently or orchestrated end-to-end.
-
 ---
 
 ## What this repo is (and is not)
@@ -66,7 +49,7 @@ Each layer is implemented as a separate Spark job and can be executed independen
 
 ---
 
-## Repository structure (important)
+## Repository structure
 
 ```
 .
@@ -107,7 +90,7 @@ Each layer is implemented as a separate Spark job and can be executed independen
 This platform uses **Apache Airflow** as the "Brain" and **Spark Standalone** as the "Muscle."
 
 * **The Submitter (Airflow):** When a DAG task runs, Airflow executes a `spark-submit` command via the `BashOperator`.
-* **The Driver (Inside Airflow):** The Spark Driver starts **inside the Airflow worker container**. It parses your Python script, builds the DAG of Spark stages, and communicates with the Spark Master.
+* **The Driver (Inside Airflow):** The Spark Driver starts **inside the Airflow worker container**. It parses the Python script, builds the DAG of Spark stages, and communicates with the Spark Master.
 * **The Executors (Spark Workers):** The Spark Master allocates resources on the `spark-worker` containers. These workers execute the actual data processing tasks and write directly to **MinIO (S3)**.
 
 > **Note on Versioning:** To avoid `PYTHON_VERSION_MISMATCH` errors, the Python version in the Airflow container and the Spark Worker containers are strictly pinned to **Python 3.9**.
@@ -116,20 +99,20 @@ This platform uses **Apache Airflow** as the "Brain" and **Spark Standalone** as
 
 ## Medallion Pipeline Section
 
-### 🥉 Bronze: Raw Ingestion
+### Bronze: Raw Ingestion
 
 * **Source:** PostgreSQL (`customers` table)
 * **Action:** JDBC Read via Spark
 * **Format:** Delta Lake (Append-only)
 * **Path:** `s3a://bronze/customers/`
 
-### 🥈 Silver: Cleanse & Conform
+### Silver: Cleanse & Conform
 
 * **Action:** Schema enforcement, deduplication, and null handling.
 * **Format:** Delta Lake (Overwrite/Upsert)
 * **Path:** `s3a://silver/customers_cleansed/`
 
-### 🥇 Gold: Business Aggregates
+### Gold: Business Aggregates
 
 * **Action:** Window functions, joins, and aggregations (e.g., `customers_by_country`).
 * **Format:** Delta Lake
@@ -170,22 +153,3 @@ Detailed configuration instructions live in the `documentation/` directory.
 
 ---
 
-## Why this setup matters
-
-This repository intentionally avoids shortcuts (like local Spark sessions inside Airflow) in favor of patterns that:
-
-* Scale to real clusters
-* Translate directly to Databricks / EMR / Kubernetes
-* Encourage clean separation between orchestration and compute
-* Reduce “works locally, fails in prod” issues
-
----
-
-## Next steps
-
-* Read the documents in `documentation/` for deep dives
-* Inspect the Airflow DAGs to understand orchestration patterns
-* Extend the pipeline with new Silver or Gold transformations
-* Replace MinIO with real S3 or migrate Spark to Kubernetes when ready
-
----
