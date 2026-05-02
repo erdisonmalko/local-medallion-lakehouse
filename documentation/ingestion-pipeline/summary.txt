@@ -1,0 +1,6 @@
+Legacy object cleanup is automatic. The script detects and drops old pre-lakeflow objects from very early versions (replicate_io_audit_ddl_trigger_1, alterTableTrigger_1, captureInstanceTracker_1, etc.) if they exist. If your test DB had any of those, they'll be cleaned up silently. On production this is safe but worth being aware of.
+
+The DDL audit trigger is database-scoped, not table-scoped. It fires on every ALTER TABLE in the whole database, but only writes a log row if both CT and the specific table are enabled. So non-tracked tables won't pollute the audit log.
+
+
+For CDC, EXECUTE AS OWNER is used in the helper procedures (lakeflowDisableOldCaptureInstance, lakeflowRefreshCaptureInstance). This means those procs run with the db_owner's identity when called — important to know, as it's standard practice but worth flagging
